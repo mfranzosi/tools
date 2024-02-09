@@ -1,0 +1,127 @@
+<!--
+* Copyright (c) 2024 Massimo Franzosi
+* github.com/mfranzosi/tools
+* Distributed under the terms of the MIT license.
+* http://www.opensource.org/licenses/mit-license.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <style type="text/css">
+        body {
+            background-color: #222;
+            color: #bbb;
+            font-family: Arial
+        }
+
+        .control {
+            background-color: black;
+            color: #ddd
+        }
+
+        a {
+            color: orange
+        }
+    </style>
+</head>
+<body>
+    <main role="main" style="overflow-x:hidden; margin:0 auto">
+        <p>Paste a JSON string here to parse its nested JSON properties recursively. See the steps performed and the resulting object in console (F12).</p>
+        <div style="height:98vh">
+            <textarea type="text" id="inputTxt" style="width:99%;min-height:45%; background-color:black; color: #ddd"></textarea>
+            <textarea type="text" id="outputTxt" style="width:99%;min-height:45%; background-color:black; color: #ddd" readonly=""></textarea>
+        </div>
+        <div style="float:right; font-size:0.8em;">Copyright (c) 2024 Massimo Franzosi | <a href="https://github.com/mfranzosi">Contact me</a> | <a href="http://www.opensource.org/licenses/mit-license.html">License</a></div>
+    </main>
+
+    <script>
+var output = {};
+$("#inputTxt").on("input", function () {
+    var t = $(this).val();
+
+    var input = JSON.parse(t);
+
+    myParse(input, null);
+
+    console.log(output);
+
+    $("#outputTxt").text(JSON.stringify(output, null, "\t"));
+});
+
+
+function myParse(inputJson, parent) {
+    for (var key in inputJson) {
+        var fullPath = (parent != null) ? (parent + '.' + key) : key;
+        if (inputJson.hasOwnProperty(key)) {
+            var inputString = JSON.stringify(inputJson[key]);
+
+            var start1 = inputString.indexOf('{');
+            var end1 = inputString.lastIndexOf('}');
+            var start2 = inputString.indexOf('[');
+            var end2 = inputString.lastIndexOf(']');
+
+            var start = start1;
+            var end = end1;
+
+            if (start2 > -1 && (start2 < start1 || start1 == -1) && end2 > end1 && end2 > -1) {
+                start = start2;
+                end = end2;
+            }
+
+            if (start == -1 || end <= start) {
+                setValue(fullPath, inputJson[key]);
+                continue;
+            }
+
+            var inputSubString = inputString.substring(start, end + 1);
+
+            try {
+                var subJson = JSON.parse(inputSubString);
+                console.log(fullPath + " is valid JSON");
+                try {
+                    myParse(subJson, fullPath);
+                } catch (e) { console.error(e); }
+            }
+            catch
+            {
+                console.log(fullPath + " is NOT valid JSON. Trying to escape quotes");
+                try {
+                    inputSubString = inputSubString.replace(new RegExp('\\\\"', 'g'), '"');
+                    subJson = JSON.parse(inputSubString);
+                    try {
+                        myParse(subJson, fullPath);
+                    } catch (e) {
+                        console.error(e);
+                    }
+
+                } catch (e) {
+                    console.log(fullPath + ": cannot retrieve a valid JSON inside the value. No action.");
+                    setValue(fullPath, inputJson[key]);
+                }
+
+            }
+        }
+    }
+}
+
+function setValue(path, value) {
+    console.log("setting " + path + " to " + value)
+    var arr = path.split('.');
+    var target = output;
+
+    for (var i = 0; i < arr.length - 1; i++) {
+        var node = arr[i];
+        if (!target[node]) {
+            target[node] = {};
+        }
+
+        target = target[node];
+    }
+
+    var node = arr[arr.length - 1];
+    target[node] = value;
+}
+    </script>
+</body>
+</html>
