@@ -1,0 +1,89 @@
+<!--
+* Copyright (c) 2024 Massimo Franzosi
+* github.com/mfranzosi/tools
+* Distributed under the terms of the MIT license.
+* http://www.opensource.org/licenses/mit-license.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <style type="text/css">
+        body {
+            background-color: #222;
+            color: #bbb;
+            font-family: Arial
+        }
+
+        .control {
+            background-color: black;
+            color: #ddd
+        }
+
+        a {
+            color: orange
+        }
+    </style>
+</head>
+<body>
+    <main role="main" style="overflow-x:hidden; margin:0 auto">
+        <p>Copy a table with headers and paste it here to get an insert script</p>
+        <p>
+            Table name: <input type="text" id="tableName" class="control" style="width:200px" placeholder="Insert table name here" />
+            <input type="radio" name="insertMode" id="chkMulti" class="control" checked /> Multiple insert
+            <input type="radio" name="insertMode" id="chkMultiWithGo" class="control" /> Multiple insert separated by GO
+            <input type="radio" name="insertMode" id="chkSingle" class="control" /> Single insert
+
+        </p>
+        <div style="height:98vh">
+            <textarea type="text" id="myTextBox" style="width:99%; min-height:45%;" class="control"></textarea>
+            <textarea type="text" id="outputTxt" style="width:99%; min-height:45%;" class="control" readonly></textarea>
+        </div>
+
+        <div style="float:right; font-size:0.8em;">Copyright (c) 2024 Massimo Franzosi | <a href="https://github.com/mfranzosi">Contact me</a> | <a href="http://www.opensource.org/licenses/mit-license.html">License</a></div>
+    </main>
+
+    <script>
+        $("#myTextBox").on("input", function () {
+            var t = $(this).val();
+            if (!t) { return; }
+
+            var tableName = $("#tableName").val() || "TableName";
+            var addGo = $("#chkMultiWithGo")[0]["checked"];
+            var single = $("#chkSingle")[0]["checked"];
+
+            var i = t.indexOf('\n');
+
+            var statement = "INSERT INTO [" + tableName + "] ([" + t.substring(0, i).replace(new RegExp('\t', 'g'), "], [") + "])";
+
+            if (single) {
+                statement += "\r\nVALUES\r\n('";
+            } else {
+                statement += " VALUES ('";
+            }
+
+            t = t.substring(i + 1, t.length);
+
+            t = t.replace(new RegExp("'", 'g'), "''");
+            t = t.replace(new RegExp('\t', 'g'), "', '");
+
+            if (single) {
+                t = t.replace(new RegExp('\r?\n', 'g'), "'),\r\n('");
+            } else if (addGo) {
+                t = t.replace(new RegExp('\r?\n', 'g'), "')\r\nGO\r\n" + statement);
+            } else {
+                t = t.replace(new RegExp('\r?\n', 'g'), "')\r\n" + statement);
+            }
+
+
+
+            t = t.replace(new RegExp("'NULL'", 'g'), "NULL");
+            t = statement + t + "')";
+
+
+            $("#outputTxt").text(t);
+        });
+
+    </script>
+</body>
+</html>

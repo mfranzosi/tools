@@ -1,0 +1,52 @@
+<!--
+* Copyright (c) 2024 Massimo Franzosi
+* github.com/mfranzosi/tools
+* Distributed under the terms of the MIT license.
+* http://www.opensource.org/licenses/mit-license.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <style type="text/css">
+        body {
+            background-color: #222;
+            color: #bbb;
+            font-family: Arial
+        }
+
+        .control {
+            background-color: black;
+            color: #ddd
+        }
+
+        a {
+            color: orange
+        }
+    </style>
+</head>
+<body>
+    <main role="main" style="overflow-x:hidden; margin:0 auto">
+        <p>Select a table column and paste it here to get a formatted collection of values</p>
+        <div style="height:98vh">
+            <textarea type="text" id="inputTxt" style="width:99%;min-height:45%; background-color:black; color: #ddd"></textarea>
+            <textarea type="text" id="outputTxt" style="width:99%;min-height:45%; background-color:black; color: #ddd" readonly=""></textarea>
+        </div>
+        <div style="float:right; font-size:0.8em;">Copyright (c) 2024 Massimo Franzosi | <a href="https://github.com/mfranzosi">Contact me</a> | <a href="http://www.opensource.org/licenses/mit-license.html">License</a></div>
+    </main>
+
+    <script>$("#inputTxt").on("input", function () {
+            var t = $(this).val();
+
+            t = t.replace(new RegExp("'", 'g'), "''");
+
+            t = t.replace(new RegExp('\r?\n', 'g'), "',\r\n'");
+
+            t = "('" + t + "')";
+
+            t = t.replace(new RegExp("'NULL'", 'g'), "NULL");
+
+            $("#outputTxt").text(t);
+        });</script>
+</body>
+</html>
