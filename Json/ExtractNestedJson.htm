@@ -42,19 +42,19 @@ $("#inputTxt").on("input", function () {
 
     var input = JSON.parse(t);
 
-    myParse(input, null);
+    parse(input, null);
 
-    console.log(output);
-
-    $("#outputTxt").text(JSON.stringify(output, null, "\t"));
+  var value = output; //getValue("attributes.Payload.Data");
+  console.log(value);
+  $("#outputTxt").text(JSON.stringify(value, null, "\t"));
 });
 
 
-function myParse(inputJson, parent) {
+function parse(inputJson, parent) {
     for (var key in inputJson) {
         var fullPath = (parent != null) ? (parent + '.' + key) : key;
         if (inputJson.hasOwnProperty(key)) {
-            var inputString = JSON.stringify(inputJson[key]);
+            var inputString = JSON.stringify(inputJson[key]).replace(new RegExp("\\\\\\\\u0027",'g'), "'");
 
             var start1 = inputString.indexOf('{');
             var end1 = inputString.lastIndexOf('}');
@@ -69,7 +69,7 @@ function myParse(inputJson, parent) {
                 end = end2;
             }
 
-            if (start == -1 || end <= start) {
+            if (start == -1 || end <= start || start > 2) {
                 setValue(fullPath, inputJson[key]);
                 continue;
             }
@@ -80,23 +80,24 @@ function myParse(inputJson, parent) {
                 var subJson = JSON.parse(inputSubString);
                 console.log(fullPath + " is valid JSON");
                 try {
-                    myParse(subJson, fullPath);
+                    parse(subJson, fullPath);
                 } catch (e) { console.error(e); }
             }
             catch
             {
-                console.log(fullPath + " is NOT valid JSON. Trying to escape quotes");
                 try {
                     inputSubString = inputSubString.replace(new RegExp('\\\\"', 'g'), '"');
                     subJson = JSON.parse(inputSubString);
+                    console.log(fullPath + " is valid JSON (escaping quotes)");
+
                     try {
-                        myParse(subJson, fullPath);
+                        parse(subJson, fullPath);
                     } catch (e) {
                         console.error(e);
                     }
 
                 } catch (e) {
-                    console.log(fullPath + ": cannot retrieve a valid JSON inside the value. No action.");
+                    console.warn(fullPath + ": content inside {} or [] is not a valid JSON. No parsing will be done for this property.");
                     setValue(fullPath, inputJson[key]);
                 }
 
@@ -106,7 +107,8 @@ function myParse(inputJson, parent) {
 }
 
 function setValue(path, value) {
-    console.log("setting " + path + " to " + value)
+    console.log(path + " = " + value)
+
     var arr = path.split('.');
     var target = output;
 
@@ -121,6 +123,23 @@ function setValue(path, value) {
 
     var node = arr[arr.length - 1];
     target[node] = value;
+}
+
+function getValue(path) {
+ var arr = path.split('.');
+ var target = output;
+
+ for (var i = 0; i < arr.length - 1; i++) {
+     var node = arr[i];
+     if (!target[node]) {
+         target[node] = {};
+     }
+
+     target = target[node];
+ }
+
+ var node = arr[arr.length - 1];
+ return target[node];
 }
     </script>
 </body>
