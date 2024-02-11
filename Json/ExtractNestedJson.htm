@@ -29,118 +29,137 @@
     <main role="main" style="overflow-x:hidden; margin:0 auto">
         <p>Paste a JSON string here to parse its nested JSON properties recursively. See the steps performed and the resulting object in console (F12).</p>
         <div style="height:98vh">
-            <textarea type="text" id="inputTxt" style="width:99%;min-height:45%; background-color:black; color: #ddd"></textarea>
-            <textarea type="text" id="outputTxt" style="width:99%;min-height:45%; background-color:black; color: #ddd" readonly=""></textarea>
+            <textarea type="text" id="txtInput" style="width:99%;min-height:45%; background-color:black; color: #ddd"></textarea>
+            Optionally filter result for node: <input id="txtFilter" type="text" placeholder="example: attributes.Payload.Data" style="width:400px; background-color:black; color: #ddd" />
+            <textarea type="text" id="txtOutput" style="width:99%;min-height:45%; background-color:black; color: #ddd" readonly=""></textarea>
         </div>
         <div style="float:right; font-size:0.8em;">Copyright (c) 2024 Massimo Franzosi | <a href="https://github.com/mfranzosi">Contact me</a> | <a href="http://www.opensource.org/licenses/mit-license.html">License</a></div>
     </main>
 
     <script>
-var output = {};
-$("#inputTxt").on("input", function () {
-    var t = $(this).val();
+        var output = {};
+        $("#txtInput").on("input", function () {
+            var t = $(this).val();
 
-    var input = JSON.parse(t);
+            var input = JSON.parse(t);
 
-    parse(input, null);
+            parse(input, null);
 
-  var value = output; //getValue("attributes.Payload.Data");
-  console.log(value);
-  $("#outputTxt").text(JSON.stringify(value, null, "\t"));
-});
+            filterResult();
+        });
 
+        $("#txtFilter").on("input", function () {
+            filterResult();
+        });
 
-function parse(inputJson, parent) {
-    for (var key in inputJson) {
-        var fullPath = (parent != null) ? (parent + '.' + key) : key;
-        if (inputJson.hasOwnProperty(key)) {
-            var inputString = JSON.stringify(inputJson[key]).replace(new RegExp("\\\\\\\\u0027",'g'), "'");
+        function filterResult() {
+            var value = output;
+            var txtFilter = $("#txtFilter").val();
+            localStorage.setItem("ExtractNestedJson", txtFilter);
 
-            var start1 = inputString.indexOf('{');
-            var end1 = inputString.lastIndexOf('}');
-            var start2 = inputString.indexOf('[');
-            var end2 = inputString.lastIndexOf(']');
+            if (txtFilter) {
+                value = getValue(txtFilter);
 
-            var start = start1;
-            var end = end1;
-
-            if (start2 > -1 && (start2 < start1 || start1 == -1) && end2 > end1 && end2 > -1) {
-                start = start2;
-                end = end2;
+                if (value == undefined) {
+                    value = txtFilter + " node was not found.";
+                }
             }
 
-            if (start == -1 || end <= start || start > 2) {
-                setValue(fullPath, inputJson[key]);
-                continue;
-            }
+            console.log(value);
+            $("#txtOutput").text(JSON.stringify(value, null, "\t"));
+        }
 
-            var inputSubString = inputString.substring(start, end + 1);
+        function parse(inputJson, parent) {
+            for (var key in inputJson) {
+                var fullPath = (parent != null) ? (parent + '.' + key) : key;
+                if (inputJson.hasOwnProperty(key)) {
+                    var inputString = JSON.stringify(inputJson[key]).replace(new RegExp("\\\\\\\\u0027", 'g'), "'");
 
-            try {
-                var subJson = JSON.parse(inputSubString);
-                console.log(fullPath + " is valid JSON");
-                try {
-                    parse(subJson, fullPath);
-                } catch (e) { console.error(e); }
-            }
-            catch
-            {
-                try {
-                    inputSubString = inputSubString.replace(new RegExp('\\\\"', 'g'), '"');
-                    subJson = JSON.parse(inputSubString);
-                    console.log(fullPath + " is valid JSON (escaping quotes)");
+                    var start1 = inputString.indexOf('{');
+                    var end1 = inputString.lastIndexOf('}');
+                    var start2 = inputString.indexOf('[');
+                    var end2 = inputString.lastIndexOf(']');
 
-                    try {
-                        parse(subJson, fullPath);
-                    } catch (e) {
-                        console.error(e);
+                    var start = start1;
+                    var end = end1;
+
+                    if (start2 > -1 && (start2 < start1 || start1 == -1) && end2 > end1 && end2 > -1) {
+                        start = start2;
+                        end = end2;
                     }
 
-                } catch (e) {
-                    console.warn(fullPath + ": content inside {} or [] is not a valid JSON. No parsing will be done for this property.");
-                    setValue(fullPath, inputJson[key]);
-                }
+                    if (start == -1 || end <= start || start > 2) {
+                        setValue(fullPath, inputJson[key]);
+                        continue;
+                    }
 
+                    var inputSubString = inputString.substring(start, end + 1);
+
+                    try {
+                        var subJson = JSON.parse(inputSubString);
+                        console.log(fullPath + " is valid JSON");
+                        try {
+                            parse(subJson, fullPath);
+                        } catch (e) { console.error(e); }
+                    }
+                    catch
+                    {
+                        try {
+                            inputSubString = inputSubString.replace(new RegExp('\\\\"', 'g'), '"');
+                            subJson = JSON.parse(inputSubString);
+                            console.log(fullPath + " is valid JSON (escaping quotes)");
+
+                            try {
+                                parse(subJson, fullPath);
+                            } catch (e) {
+                                console.error(e);
+                            }
+
+                        } catch (e) {
+                            console.warn(fullPath + ": content inside {} or [] is not a valid JSON. No parsing will be done for this property.");
+                            setValue(fullPath, inputJson[key]);
+                        }
+
+                    }
+                }
             }
         }
-    }
-}
 
-function setValue(path, value) {
-    console.log(path + " = " + value)
+        function setValue(path, value) {
+            console.log(path + " = " + value)
 
-    var arr = path.split('.');
-    var target = output;
+            var arr = path.split('.');
+            var target = output;
 
-    for (var i = 0; i < arr.length - 1; i++) {
-        var node = arr[i];
-        if (!target[node]) {
-            target[node] = {};
+            for (var i = 0; i < arr.length - 1; i++) {
+                var node = arr[i];
+                if (!target[node]) {
+                    target[node] = {};
+                }
+
+                target = target[node];
+            }
+
+            var node = arr[arr.length - 1];
+            target[node] = value;
         }
 
-        target = target[node];
-    }
+        function getValue(path) {
+            var arr = path.split('.');
+            var target = output;
 
-    var node = arr[arr.length - 1];
-    target[node] = value;
-}
+            for (var i = 0; i < arr.length - 1; i++) {
+                var node = arr[i];
+                target = target[node];
+            }
 
-function getValue(path) {
- var arr = path.split('.');
- var target = output;
+            var node = arr[arr.length - 1];
+            return target[node];
+        }
 
- for (var i = 0; i < arr.length - 1; i++) {
-     var node = arr[i];
-     if (!target[node]) {
-         target[node] = {};
-     }
-
-     target = target[node];
- }
-
- var node = arr[arr.length - 1];
- return target[node];
-}
+        $('document').ready(function () {
+            $("#txtFilter").val(localStorage.getItem("ExtractNestedJson"));
+        });
     </script>
 </body>
 </html>
