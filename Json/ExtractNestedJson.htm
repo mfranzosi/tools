@@ -61,7 +61,8 @@
                 value = getValue(txtFilter);
 
                 if (value == undefined) {
-                    value = txtFilter + " node was not found.";
+                    $("#txtOutput").text("'" + txtFilter + "' node was not found.");
+                    return;
                 }
             }
 
@@ -98,9 +99,18 @@
                     try {
                         var subJson = JSON.parse(inputSubString);
                         console.log(fullPath + " is valid JSON");
-                        try {
-                            parse(subJson, fullPath);
-                        } catch (e) { console.error(e); }
+
+                        // in case of array we set the value directly without any recursive parsing, to preserve the output and not introducing numeric keys
+                        if (isArray(subJson)) {
+                            setValue(fullPath, subJson);
+                        } else {
+                            try {
+                                parse(subJson, fullPath);
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        }
+
                     }
                     catch
                     {
@@ -109,10 +119,15 @@
                             subJson = JSON.parse(inputSubString);
                             console.log(fullPath + " is valid JSON (escaping quotes)");
 
-                            try {
-                                parse(subJson, fullPath);
-                            } catch (e) {
-                                console.error(e);
+                            // in case of array we set the value directly without any recursive parsing, to preserve the output and not introducing numeric keys
+                            if (isArray(subJson)) {
+                                setValue(fullPath, subJson);
+                            } else {
+                                try {
+                                    parse(subJson, fullPath);
+                                } catch (e) {
+                                    console.error(e);
+                                }
                             }
 
                         } catch (e) {
@@ -160,6 +175,17 @@
         $('document').ready(function () {
             $("#txtFilter").val(localStorage.getItem("ExtractNestedJson"));
         });
+
+        // returns true if all keys are numeric
+        function isArray(json) {
+            for (var key in json) {
+                if (key[0] < '0' || key[0] > '9') {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     </script>
 </body>
 </html>
